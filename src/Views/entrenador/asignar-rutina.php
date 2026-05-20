@@ -1,0 +1,89 @@
+<?php
+\Gymfit\Core\View::layout('default');
+$title = 'Asignar rutina - GYMFIT';
+$user = $user ?? [];
+?>
+<?php \Gymfit\Core\View::section('scripts'); ?>
+<script>
+const params = new URLSearchParams(location.search);
+const CID = parseInt(params.get('cliente') || '0', 10);
+
+(async () => {
+  const u = await requireRole('entrenador');
+  if (!u) return;
+  if (!CID) { location.href = '/panel-entrenador'; return; }
+
+  try {
+    const r = await api('/clientes');
+    const c = r.data.clientes.find(x => x.id === CID);
+    if (c) {
+      document.getElementById('cliNombre').textContent = c.nombre;
+      document.getElementById('cliEmail').textContent = c.email;
+      document.getElementById('cliAvatar').src = `https://i.pravatar.cc/120?img=${(c.id * 7) % 70 + 1}`;
+      document.getElementById('cliEdad').textContent = c.edad || '—';
+      document.getElementById('cliObj').textContent = c.objetivo || '—';
+      document.getElementById('cliNivel').textContent = c.nivel || '—';
+    }
+  } catch(e){}
+
+  try {
+    const r = await api(`/rutinas?cliente_id=${CID}`);
+    if (r.data.rutina) {
+      document.getElementById('contenido').value = r.data.rutina.contenido;
+      document.getElementById('obs').value = r.data.rutina.observaciones || '';
+    }
+  } catch(e){}
+})();
+
+document.getElementById('btnSave').addEventListener('click', async () => {
+  const contenido = document.getElementById('contenido').value.trim();
+  const observaciones = document.getElementById('obs').value.trim();
+  if (!contenido) return toast('Escribe la rutina', 'error');
+  try {
+    await api('/rutinas', { method:'POST', body:{ cliente_id:CID, contenido, observaciones }});
+    toast('Rutina guardada');
+  } catch(err){ toast(err.message, 'error'); }
+});
+</script>
+<?php \Gymfit\Core\View::endSection('scripts'); ?>
+
+<div class="dash">
+  <aside class="dash-side">
+    <div class="brand"><a class="gf-logo" href="<?= \Gymfit\Core\View::asset('') ?>">GYM<span>FIT</span></a></div>
+    <div class="p-3">
+      <a href="/panel-entrenador" class="gf-red small"><i class="bi bi-arrow-left"></i> Volver a clientes</a>
+    </div>
+    <div class="text-center px-3 mb-3">
+      <img id="cliAvatar" src="https://i.pravatar.cc/120?img=14" class="rounded-circle mb-2" style="width:90px;height:90px;object-fit:cover">
+      <h6 id="cliNombre" class="fw-bold mb-0">Cliente</h6>
+      <small class="text-secondary" id="cliEmail"></small>
+    </div>
+    <ul class="list-unstyled px-3 small text-secondary">
+      <li class="mb-1"><strong class="text-light">Información</strong></li>
+      <li><strong class="text-light">Edad:</strong> <span id="cliEdad">—</span></li>
+      <li><strong class="text-light">Objetivo:</strong> <span id="cliObj">—</span></li>
+      <li><strong class="text-light">Nivel:</strong> <span id="cliNivel">—</span></li>
+    </ul>
+    <div class="logout mt-auto"><a href="#" onclick="logout();return false;"><i class="bi bi-box-arrow-left"></i> Cerrar sesión</a></div>
+  </aside>
+
+  <main class="dash-main">
+    <h3 class="fw-bold">Asignar rutina</h3>
+    <p class="text-secondary">Crea o edita la rutina del cliente</p>
+
+    <div class="gf-card mb-3">
+      <label class="form-label fw-bold">Rutina</label>
+      <textarea id="contenido" class="form-control" rows="12" placeholder="Día 1 - Pecho y tríceps&#10;- Press banca 4x10&#10;..."></textarea>
+    </div>
+
+    <div class="gf-card mb-3">
+      <label class="form-label fw-bold">Observaciones</label>
+      <textarea id="obs" class="form-control" rows="5" placeholder="Recomendaciones para el cliente..."></textarea>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <a href="/panel-entrenador" class="btn btn-gf-outline text-light">Cancelar</a>
+      <button id="btnSave" class="btn btn-gf" type="submit">Guardar rutina</button>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,10 @@
+{
+  "infiniteLoopProtection": false,
+  "hardReloadOnChange": false,
+  "view": "browser",
+  "template": "php",
+  "container": {
+    "startScript": "php -S 0.0.0.0:8000",
+    "node": "18"
+  }
+}

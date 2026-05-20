@@ -42,12 +42,12 @@
     e.preventDefault();
     const f = e.target;
     try {
-      const r = await api('registro.php', { method:'POST', body: {
+      const r = await api('/auth/register', { method:'POST', body: {
         nombre:f.nombre.value.trim(), email:f.email.value.trim(),
         password:f.password.value, rol:f.rol.value
       }});
       toast('¡Cuenta creada!');
-      setTimeout(() => redirectByRole(r.user), 600);
+      setTimeout(() => redirectByRole(r.data.user), 600);
     } catch(err){ toast(err.message, 'error'); }
   });
 </script>

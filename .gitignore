@@ -1,0 +1,7 @@
+/.phpunit.cache/
+/coverage/
+/data/*.sqlite
+/logs/
+/node_modules/
+/vendor/
+.env

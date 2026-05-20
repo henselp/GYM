@@ -62,23 +62,26 @@ const CID = parseInt(params.get('cliente') || '0', 10);
   if (!u) return;
   if (!CID) { location.href = 'panel-entrenador.html'; return; }
 
-  // Cargar info del cliente desde lista de clientes del entrenador
+  // Cargar info del cliente
   try {
-    const r = await api('clientes.php');
-    const c = r.clientes.find(x => x.id === CID);
+    const r = await api('/clientes');
+    const c = r.data.clientes.find(x => x.id === CID);
     if (c) {
       document.getElementById('cliNombre').textContent = c.nombre;
       document.getElementById('cliEmail').textContent = c.email;
-      document.getElementById('cliAvatar').src = `https://i.pravatar.cc/120?img=${(c.id*7)%70+1}`;
+      document.getElementById('cliAvatar').src = `https://i.pravatar.cc/120?img=${(c.id * 7) % 70 + 1}`;
+      document.getElementById('cliEdad').textContent = c.edad || '—';
+      document.getElementById('cliObj').textContent = c.objetivo || '—';
+      document.getElementById('cliNivel').textContent = c.nivel || '—';
     }
   } catch(e){}
 
   // Última rutina existente
   try {
-    const r = await api(`rutinas.php?cliente_id=${CID}`);
-    if (r.rutina) {
-      document.getElementById('contenido').value = r.rutina.contenido;
-      document.getElementById('obs').value = r.rutina.observaciones || '';
+    const r = await api(`/rutinas?cliente_id=${CID}`);
+    if (r.data.rutina) {
+      document.getElementById('contenido').value = r.data.rutina.contenido;
+      document.getElementById('obs').value = r.data.rutina.observaciones || '';
     }
   } catch(e){}
 })();
@@ -88,7 +91,7 @@ document.getElementById('btnSave').addEventListener('click', async () => {
   const observaciones = document.getElementById('obs').value.trim();
   if (!contenido) return toast('Escribe la rutina', 'error');
   try {
-    await api('rutinas.php', { method:'POST', body:{ cliente_id:CID, contenido, observaciones }});
+    await api('/rutinas', { method:'POST', body:{ cliente_id:CID, contenido, observaciones }});
     toast('Rutina guardada');
   } catch(err){ toast(err.message, 'error'); }
 });

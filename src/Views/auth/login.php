@@ -1,0 +1,65 @@
+<?php
+\Gymfit\Core\View::layout('default');
+$title = 'Iniciar sesión - GYMFIT';
+$user = $user ?? null;
+?>
+<?php \Gymfit\Core\View::section('scripts'); ?>
+<script>
+getMe().then(u => { if (u) redirectByRole(u); });
+
+document.querySelectorAll('[data-rol]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('[data-rol]').forEach(x => x.classList.remove('btn-gf'));
+    b.classList.add('btn-gf');
+    document.getElementById('rolSeleccionado').value = b.dataset.rol;
+  });
+});
+
+document.getElementById('formLogin').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  try {
+    const r = await api('/auth/login', {
+      method: 'POST',
+      body: { email: f.email.value.trim(), password: f.password.value, rol: f.rol.value || null }
+    });
+    redirectByRole(r.data.user);
+  } catch (err) { toast(err.message, 'error'); }
+});
+</script>
+<?php \Gymfit\Core\View::endSection('scripts'); ?>
+
+<div class="auth-wrap">
+  <div class="auth-card text-center">
+    <a href="<?= \Gymfit\Core\View::asset('') ?>" class="gf-logo d-inline-block mb-2">GYM<span>FIT</span><small>TU MEJOR VERSIÓN COMIENZA AQUÍ</small></a>
+    <h4 class="mt-3 mb-4 fw-bold">Iniciar sesión</h4>
+
+    <form id="formLogin" class="text-start">
+      <?= \Gymfit\Core\View::csrfField() ?>
+      <div class="mb-3">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+          <input type="email" class="form-control" name="email" placeholder="Correo electrónico" required>
+        </div>
+      </div>
+      <div class="mb-2">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-lock"></i></span>
+          <input type="password" class="form-control" name="password" placeholder="Contraseña" required>
+        </div>
+      </div>
+      <div class="text-end mb-3"><a href="#" class="small">¿Olvidaste tu contraseña?</a></div>
+
+      <input type="hidden" name="rol" id="rolSeleccionado" value="">
+      <button class="btn btn-gf w-100" type="submit">Iniciar sesión</button>
+
+      <div class="text-center text-muted my-3 small">o continúa como</div>
+      <div class="row g-2">
+        <div class="col-6"><button type="button" class="btn btn-gf-outline w-100" data-rol="entrenador"><i class="bi bi-person-badge"></i> Entrenador</button></div>
+        <div class="col-6"><button type="button" class="btn btn-gf-outline w-100" data-rol="cliente"><i class="bi bi-person"></i> Cliente</button></div>
+      </div>
+    </form>
+
+    <p class="mt-4 small text-muted">¿No tienes cuenta? <a href="<?= \Gymfit\Core\View::asset('registro') ?>">Regístrate aquí</a></p>
+  </div>
+</div>

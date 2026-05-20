@@ -1,52 +1,56 @@
-/* GYMFIT - JS común: peticiones, sesión, logout, contacto */
+/* GYMFIT - JS común: API, sesión, toast, CSRF */
 
-const API = 'php';
+const API = '/api';
 
-async function api(path, opts = {}){
-  const res = await fetch(`${API}/${path}`, {
+let csrfToken = '';
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  const res = await fetch(`${API}${path}`, {
     method: opts.method || 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     credentials: 'same-origin',
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   let data = null;
-  try { data = await res.json(); } catch(e){}
+  try { data = await res.json(); } catch (e) { /* empty */ }
   if (!res.ok || !data?.ok) {
     throw new Error(data?.error || `Error ${res.status}`);
+  }
+  if (data?.data?.csrf_token) {
+    csrfToken = data.data.csrf_token;
   }
   return data;
 }
 
-async function getMe(){
-  try { const r = await api('me.php'); return r.user; }
-  catch(e){ return null; }
+async function getMe() {
+  try { const r = await api('/auth/me'); return r.data?.user || null; }
+  catch (e) { return null; }
 }
 
-async function logout(){
-  try { await api('logout.php', { method:'POST' }); } catch(e){}
-  location.href = 'login.html';
+async function logout() {
+  try { await api('/auth/logout', { method: 'POST' }); } catch (e) { /* empty */ }
+  location.href = '/login.html';
 }
 
-// Redirigir según rol
-function redirectByRole(user){
-  if (!user) { location.href = 'login.html'; return; }
-  if (user.rol === 'entrenador') location.href = 'panel-entrenador.html';
-  else location.href = 'panel-cliente.html';
+function redirectByRole(user) {
+  if (!user) { location.href = '/login.html'; return; }
+  if (user.rol === 'entrenador') location.href = '/panel-entrenador.html';
+  else location.href = '/panel-cliente.html';
 }
 
-// Guard de páginas privadas
-async function requireRole(rol){
+async function requireRole(rol) {
   const u = await getMe();
-  if (!u) { location.href = 'login.html'; return null; }
+  if (!u) { location.href = '/login.html'; return null; }
   if (u.rol !== rol) { redirectByRole(u); return null; }
   return u;
 }
 
-// Toast simple Bootstrap
-function toast(msg, type='success'){
-  const id = 'gf-toast-'+Date.now();
+function toast(msg, type = 'success') {
+  const id = 'gf-toast-' + Date.now();
   const html = `
-    <div id="${id}" class="toast align-items-center text-bg-${type==='error'?'danger':type} border-0 position-fixed top-0 end-0 m-3" style="z-index:1080" role="alert">
+    <div id="${id}" class="toast align-items-center text-bg-${type === 'error' ? 'danger' : type} border-0 position-fixed top-0 end-0 m-3" style="z-index:1080" role="alert">
       <div class="d-flex">
         <div class="toast-body">${msg}</div>
         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
@@ -59,14 +63,26 @@ function toast(msg, type='success'){
   el.addEventListener('hidden.bs.toast', () => el.remove());
 }
 
-// Wire del formulario de contacto (solo si existe)
-document.addEventListener('DOMContentLoaded', () => {
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('es-AR', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+}
+
+// Fetch CSRF token on page load
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const r = await api('/auth/me');
+    if (r.data?.csrf_token) csrfToken = r.data.csrf_token;
+  } catch (e) { /* empty */ }
+
   const f = document.getElementById('formContacto');
   if (f) f.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      await api('contacto.php', {
-        method:'POST',
+      await api('/contacto', {
+        method: 'POST',
         body: {
           nombre: f.nombre.value.trim(),
           email: f.email.value.trim(),
@@ -75,6 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       toast('¡Mensaje enviado! Pronto te contactaremos.');
       f.reset();
-    } catch(err){ toast(err.message, 'error'); }
+    } catch (err) { toast(err.message, 'error'); }
   });
 });

@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@codesandbox/nodebox": "^0.1.9"
+  }
+}

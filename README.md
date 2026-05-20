@@ -1,46 +1,76 @@
-# GYMFIT — Plataforma completa (HTML + Bootstrap 5 + JS + PHP + PostgreSQL)
+# GYMFIT — Plataforma completa (PHP MVC + Bootstrap 5 + JS + Chart.js)
 
 Sitio web público + plataforma privada con dos roles (Entrenador / Cliente),
-inspirado en las maquetas de referencia.
+refactorizada a **Arquitectura MVC** con principios **SOLID**, seguridad **OWASP**,
+informes con **Chart.js** y tests **PHPUnit**.
 
-## 📁 Estructura
+## 📁 Estructura MVC
 
 ```
 gymfit/
-├── index.html               # Landing pública (Hero, Servicios, Planes, Galería, Contacto)
-├── login.html               # Inicio de sesión
-├── registro.html            # Registro
-├── seleccionar-rol.html     # Selector visual Entrenador / Cliente
-├── panel-entrenador.html    # Lista de clientes + agregar
-├── asignar-rutina.html      # Editor de rutina por cliente
-├── panel-cliente.html       # Vista del cliente: rutina + observaciones
-├── css/styles.css
-├── js/app.js
-├── php/
-│   ├── config.php           # Conexión PDO a PostgreSQL + helpers
-│   ├── login.php
-│   ├── registro.php
-│   ├── logout.php
-│   ├── me.php
-│   ├── clientes.php
-│   ├── rutinas.php
-│   └── contacto.php
-└── sql/schema.sql           # Esquema + datos demo
+├── config/
+│   ├── app.php                 # Config general (CORS, password policy, etc.)
+│   ├── database.php            # Conexión PDO (SQLite / PostgreSQL)
+│   └── router.php              # Router para servidor embebido
+│
+├── public/
+│   └── index.php               # Front controller (rutas API + páginas)
+│
+├── src/
+│   ├── Core/
+│   │   └── View.php            # Motor de vistas con layouts + secciones
+│   │
+│   ├── Views/
+│   │   ├── layouts/default.php # Layout principal (Bootstrap + Chart.js)
+│   │   ├── landing/index.php   # Landing pública
+│   │   ├── auth/login.php      # Inicio de sesión
+│   │   ├── auth/registro.php   # Registro
+│   │   ├── auth/seleccionar-rol.php
+│   │   ├── entrenador/panel.php# Dashboard + Reportes con gráficos
+│   │   ├── entrenador/asignar-rutina.php
+│   │   └── cliente/panel.php   # Rutina + Progreso con evolución
+│   │
+│   ├── Controllers/            # 8 controladores con DI
+│   ├── Models/                 # 5 modelos (Usuario, Rutina, etc.)
+│   ├── Repositories/           # 5 repositorios (capa de datos)
+│   ├── Services/               # 4 servicios (Auth, Security, Reporte, Mensaje)
+│   ├── Middleware/             # 3 (Security OWASP, Auth, RateLimit)
+│   ├── Helpers/                # 3 (JsonHelper, ValidatorHelper, SessionHelper)
+│   ├── Exceptions/             # 5 excepciones custom
+│   └── Logger/                 # Logging por niveles
+│
+├── HTML/                       # Archivos HTML legacy (referencia)
+├── css/styles.css              # Diseño original (Bootstrap 5 dark theme)
+├── js/app.js                   # API client con CSRF
+├── sql/schema.sql              # Esquema PostgreSQL original
+├── db/setup.php                # Inicializa DB SQLite con datos demo
+├── tests/                      # Tests PHPUnit (27 tests)
+├── composer.json               # PSR-4 autoloading
+└── phpunit.xml
 ```
 
-## ⚙️ Instalación
+## ⚙️ Requisitos
 
-### 1. Requisitos
-- PHP 8.0+ con extensión `pdo_pgsql` habilitada
-- PostgreSQL 13+ (administrado con **pgAdmin**)
-- Un servidor web (XAMPP, Laragon, WAMP, MAMP o `php -S`)
+- PHP 8.1+
+- Extensiones: `pdo_sqlite` (dev) o `pdo_pgsql` (prod)
+- Composer (para autoloading)
 
-### 2. Crear la base de datos
-1. Abre **pgAdmin** y crea una base de datos llamada `gymfit`.
-2. Abre el **Query Tool** sobre esa base de datos.
-3. Carga y ejecuta el archivo `sql/schema.sql` (o copia/pega su contenido).
+## 🚀 Instalación y ejecución
 
-Esto crea las tablas y un usuario de prueba:
+```bash
+# 1. Instalar dependencias
+composer install
+
+# 2. Inicializar base de datos SQLite con datos demo
+php db/setup.php
+
+# 3. Iniciar servidor
+php -S localhost:8000 config/router.php
+```
+
+Abrir [http://localhost:8000](http://localhost:8000)
+
+### Usuarios demo
 
 | Rol         | Email                   | Contraseña |
 |-------------|-------------------------|------------|
@@ -48,54 +78,75 @@ Esto crea las tablas y un usuario de prueba:
 | Cliente     | juanperez@gmail.com     | 123456     |
 | Cliente     | anagomez@gmail.com      | 123456     |
 
-### 3. Configurar conexión
-Edita `php/config.php` y ajusta:
+### Producción con PostgreSQL
 
+Editar `config/database.php`:
 ```php
-define('DB_HOST', '127.0.0.1');
-define('DB_PORT', '5432');
-define('DB_NAME', 'gymfit');
-define('DB_USER', 'postgres');
-define('DB_PASS', 'tu_password');
+'driver' => 'pgsql',
+'host' => '127.0.0.1',
+'port' => 5432,
+'dbname' => 'gymfit',
+'user' => 'postgres',
+'password' => 'tu_password',
 ```
 
-### 4. Habilitar `pdo_pgsql`
-Edita `php.ini` y descomenta:
-```
-extension=pdo_pgsql
-```
-Reinicia Apache / el servidor PHP.
+Ejecutar `sql/schema.sql` en pgAdmin, luego `php db/setup.php`.
 
-### 5. Ejecutar
-**Opción rápida (servidor embebido de PHP):**
+## 🧭 Rutas del sistema
+
+### Páginas (MVC Views)
+
+| Ruta                    | Descripción                          |
+|-------------------------|--------------------------------------|
+| `/`                     | Landing pública                      |
+| `/login`                | Inicio de sesión                     |
+| `/registro`             | Registro de usuario                  |
+| `/panel-entrenador`     | Dashboard entrenador + reportes      |
+| `/panel-cliente`        | Panel cliente + progreso             |
+| `/asignar-rutina`       | Editor de rutina por cliente         |
+
+### API REST (JSON)
+
+| Endpoint                          | Método | Auth     | Descripción                     |
+|-----------------------------------|--------|----------|---------------------------------|
+| `/api/auth/login`                 | POST   | No       | Iniciar sesión                  |
+| `/api/auth/register`              | POST   | No       | Registrarse                     |
+| `/api/auth/logout`                | POST   | Sí       | Cerrar sesión                   |
+| `/api/auth/me`                    | GET    | No       | Usuario actual                  |
+| `/api/clientes`                   | GET    | Entr.    | Lista de clientes               |
+| `/api/clientes`                   | POST   | Entr.    | Asignar cliente por email       |
+| `/api/rutinas`                    | GET    | Sí       | Última rutina (`?cliente_id=N`) |
+| `/api/rutinas`                    | POST   | Entr.    | Guardar rutina                  |
+| `/api/contacto`                   | POST   | No       | Formulario de contacto          |
+| `/api/reportes/trainer-dashboard` | GET    | Entr.    | Dashboard con KPIs + gráficos   |
+| `/api/reportes/client-progress`   | GET    | Sí       | Progreso del cliente            |
+| `/api/mensajes/inbox`             | GET    | Sí       | Bandeja de mensajes             |
+
+## 📊 Informes (2)
+
+1. **Dashboard Entrenador**: KPIs (clientes, rutinas), gráfico barras rutinas/mes, doughnut distribución niveles, pie objetivos, lista actividad reciente
+2. **Progreso Cliente**: KPIs medidas corporales, gráfico línea evolución peso, historial de rutinas
+
+## 🔐 Seguridad (OWASP)
+
+- **CSP**: Content-Security-Policy estricta
+- **HSTS**: Strict-Transport-Security
+- **CSRF**: Token por sesión validado en cada request POST/PUT/DELETE
+- **XSS**: `htmlspecialchars()` + `strip_tags()` en toda salida
+- **Rate Limiting**: 60 requests/minuto por IP
+- **Password Policy**: 8+ caracteres, mayúscula, número, especial
+- **Session**: regeneración de ID post-login, httponly, samesite Strict
+- **Headers**: X-Frame-Options, X-Content-Type-Options, Referrer-Policy
+
+## 🧪 Tests
+
 ```bash
-cd gymfit
-php -S localhost:8000
+php vendor/bin/phpunit
 ```
-Abre [http://localhost:8000/index.html](http://localhost:8000/index.html)
 
-**Con XAMPP:** copia la carpeta `gymfit` dentro de `htdocs/` y abre
-[http://localhost/gymfit/](http://localhost/gymfit/)
-
-## 🔐 Seguridad
-- Contraseñas hasheadas con **bcrypt** vía `crypt()` + `gen_salt('bf')` de PostgreSQL.
-- Sesiones PHP (`$_SESSION`) para mantener al usuario.
-- Consultas con **PDO + parámetros preparados** (sin SQL injection).
-- Verificación de rol en cada endpoint privado.
-
-## 🧩 Endpoints PHP (JSON)
-
-| Endpoint                  | Método | Descripción                          |
-|---------------------------|--------|--------------------------------------|
-| `php/login.php`           | POST   | `{email, password, rol?}`            |
-| `php/registro.php`        | POST   | `{nombre, email, password, rol}`     |
-| `php/logout.php`          | POST   | Cierra sesión                        |
-| `php/me.php`              | GET    | Usuario actual                       |
-| `php/clientes.php`        | GET    | Lista de clientes del entrenador     |
-| `php/clientes.php`        | POST   | Asignar cliente por email            |
-| `php/rutinas.php`         | GET    | `?cliente_id=N` — última rutina      |
-| `php/rutinas.php`         | POST   | `{cliente_id, contenido, observaciones}` |
-| `php/contacto.php`        | POST   | Mensaje del formulario público       |
+- 27 tests (Unit: ValidatorHelper, SecurityService, Models — Integration: Auth)
+- SQLite in-memory para tests
 
 ## 🎨 Personalización
+
 Toda la paleta vive en `css/styles.css` bajo `:root` (rojo `#e63946`, fondo `#0e0e0e`).
